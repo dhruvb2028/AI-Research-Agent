@@ -8,12 +8,14 @@ answer can cite real sources.
 from __future__ import annotations
 
 import json
+import time
 from dataclasses import dataclass, field
 
 from app.config import LARGE_MODEL
 from app.llm import LLMClient
 from app.tools.base import SearchError
 from app.tools.search import search_web
+from app.tracing.trace_logger import NoopTracer, Tracer
 
 SEARCH_TOOL_SCHEMA = {
     "type": "function",
@@ -51,6 +53,7 @@ class AgentResult:
     evidence: list[dict] = field(default_factory=list)
     steps: int = 0
     budget_exhausted: bool = False
+    trace: dict = field(default_factory=dict)
 
 
 def run_agent(
@@ -58,8 +61,13 @@ def run_agent(
     llm: LLMClient | None = None,
     search=search_web,
     model: str = LARGE_MODEL,
+    tracer: Tracer | None = None,
 ) -> AgentResult:
-    llm = llm or LLMClient()
+    tracer = tracer or NoopTracer()
+    llm = llm or LLMClient(tracer=tracer)
+    if getattr(llm, "tracer", None) is None:
+        llm.tracer = tracer
+    tracer.event("run_start", question=question, model=model)
     messages: list[dict] = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": question},
@@ -71,7 +79,10 @@ def run_agent(
         tool_calls = msg.tool_calls or []
 
         if not tool_calls:
-            return AgentResult(answer=msg.content or "", evidence=evidence, steps=step)
+            tracer.event("run_end", steps=step, budget_exhausted=False, **tracer.summary())
+            return AgentResult(
+                answer=msg.content or "", evidence=evidence, steps=step, trace=tracer.summary()
+            )
 
         messages.append(
             {
@@ -96,7 +107,7 @@ def run_agent(
                 {
                     "role": "tool",
                     "tool_call_id": tc.id,
-                    "content": _execute_search(tc, search, evidence),
+                    "content": _execute_search(tc, search, evidence, tracer),
                 }
             )
 
@@ -111,26 +122,38 @@ def run_agent(
         }
     )
     msg = llm.chat(model=model, messages=messages)
+    tracer.event("run_end", steps=MAX_STEPS, budget_exhausted=True, **tracer.summary())
     return AgentResult(
         answer=msg.content or "",
         evidence=evidence,
         steps=MAX_STEPS,
         budget_exhausted=True,
+        trace=tracer.summary(),
     )
 
 
-def _execute_search(tool_call, search, evidence: list[dict]) -> str:
+def _execute_search(tool_call, search, evidence: list[dict], tracer) -> str:
     """Run one search_web call; append results to evidence; return the tool message."""
     try:
         args = json.loads(tool_call.function.arguments)
         query = args["query"]
     except (json.JSONDecodeError, KeyError) as e:
+        tracer.event("tool_error", tool="search_web", error=f"malformed arguments: {e}")
         return f"error: malformed tool arguments ({e}); retry with valid JSON {{\"query\": ...}}"
 
+    start = time.time()
     try:
         results = search(query)
     except SearchError as e:
+        tracer.tool_call("search_web", time.time() - start, query=query, error=str(e))
         return f"error: search failed ({e}); try a different query or answer from existing evidence"
+    tracer.tool_call(
+        "search_web",
+        time.time() - start,
+        query=query,
+        results=len(results),
+        provider=results[0]["source"] if results else None,
+    )
 
     if not results:
         return "no results; try a broader or differently-worded query"
