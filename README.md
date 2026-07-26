@@ -1,24 +1,116 @@
 # AI Research Agent
 
-An agentic research assistant: give it a question and it plans sub-questions, searches the web and a document corpus, cross-checks claims across sources, and returns a cited, synthesized answer — with a real evaluation harness measuring answer quality, citation faithfulness, latency, and cost across every design iteration.
+An agentic research assistant that plans its own searches, gathers evidence from the live web and a private document corpus, and answers with citations you can trace back to the exact passage the model read.
 
-> Work in progress. Eval numbers, demo link, and architecture docs land as the build progresses.
+The point of the project is not the demo — it is the **measurement**. Every architecture change is scored against a labelled evaluation set, every run writes a trace, and the UI is built so that a reviewer can inspect *why* an answer says what it says.
+
+## Measured results
+
+Latest full evaluation run — [`baseline-full` @ `4ec4dcf`](backend/app/eval/reports/20260726-2027-baseline-full-4ec4dcf.md), judged by `llama-3.1-8b` (a different model family from the agent's synthesizer, to limit self-preference bias):
+
+| Metric | Result |
+|---|---|
+| Answer correctness | **100%** (29/29 scored) |
+| Citation faithfulness | **100%** |
+| Dangling citations | **0** |
+| Avg latency | 57.5s |
+| Avg would-be cost | $0.0023/query |
+
+| Category | Items | Correct | Faithful | Avg latency |
+|---|---|---|---|---|
+| factual | 12/12 | 100% | 100% | 34.9s |
+| multi_hop | 9/10 | 100% | 100% | 40.0s |
+| adversarial | 8/8 | 100% | 100% | 113.2s |
+| corpus ([separate run](backend/app/eval/reports/20260726-2120-corpus-check-625ad49.md)) | 3/3 | 100% | 100% | 264.0s |
+
+**How to read this honestly.** A 100% pass rate on a 30-question set is a *regression guard*, not proof of general correctness — it means the set's difficulty ceiling currently sits below the agent's ability. It is useful for catching a change that breaks something, and not much else. The set is being hardened with obscure multi-hop chains and recency-sensitive questions to create headroom. One item in the baseline errored on a transient DNS failure, which is counted as an error rather than quietly dropped — and that failure is what exposed a real bug (see below).
+
+Every report is stamped with the commit it ran against, so any movement in these numbers is attributable to a specific change. Reports are committed under [`backend/app/eval/reports/`](backend/app/eval/reports/).
+
+### What evaluation actually caught
+
+- **Unwrapped network errors** — the DNS failure in the baseline run revealed that raw `httpx` errors in the search adapters crashed the whole item instead of rolling over to the next provider. Fixed with a regression test on run #1 of the harness.
+- **Truncated corpus evidence** — corpus snippets were being cut at 500 characters, so the agent retrieved the right chunk but the answer sat past the cut and it searched in circles until the step budget died. Fixing that plus evidence de-duplication took the same question from **247s → 37.5s**, 7 → 2 model calls, and budget-exhausted-incomplete → a clean correct answer.
+- **Model latency collapse** — `llama-3.3-70b`'s tool-calling latency degraded from ~21s to ~184s under free-tier congestion. Re-probing the catalog and switching to `deepseek-v4-flash` was a one-line config change; a full run went from ~8 minutes to 93s.
+
+These are recorded with evidence in [`docs/design-decisions.md`](docs/design-decisions.md).
+
+## Architecture
+
+```
+question → planner (LLM decides which tools to call)
+         → tool loop, budget-capped, retry/backoff
+              ├── search_web    Tavily → Serper fallback chain
+              └── search_corpus Gemini embeddings → Pinecone top-10 → rerank top-4
+         → evidence store (deduped, source-attributed)
+         → synthesis with inline [n] citations
+         → JSONL trace (every call, token, latency, cost)
+```
+
+- **Agent core** — a hand-rolled tool-use loop on OpenAI-compatible chat completions. No agent framework, so every part of the loop (tool-call validation, retry, budget enforcement, graceful degradation) is explicit and explainable.
+- **Retrieval** — hybrid. Web search falls over between providers on quota or outage; corpus retrieval embeds with `gemini-embedding-001` (Matryoshka-truncated to 768 dims, content-hash cached so re-ingest is idempotent), queries Pinecone, then reranks with a hosted cross-encoder that degrades Pinecone → Cohere → no-rerank rather than failing the query.
+- **Guardrails** — a hard step budget bounds the loop; a client-side rate limiter stays under the provider's cap; retries use exponential backoff; malformed tool calls are fed back to the model as errors rather than crashing the run.
+- **Observability** — every run writes `traces/<run_id>.jsonl`. Run history in the UI is reconstructed from those files; there is no database.
+
+## Interface
+
+A Next.js console with four sections, built on the rule that **nothing on screen is invented**:
+
+- **Research** — depth and source controls that change real agent behaviour (step budget, tool allowlist), a live activity feed of actual SSE events (model calls, searches, provider retries with their backoff), and a report with citation links.
+- **Library** — every past run, reconstructed from its trace: the answer, a forensic timeline stamped with offsets, sources, and metrics.
+- **Evaluation** — the committed eval reports, with the caveat above stated in the UI.
+- **Corpus** — live index stats and the retrieval pipeline.
+
+Relevance is shown only where a provider actually returns one (Tavily's score, Pinecone's cosine similarity). Serper returns SERP rank, so its relevance column shows `—` rather than passing rank off as a score. Retrieved-but-uncited sources are labelled, not hidden.
+
+Deliberately **not** built, for lack of a real data source: credibility scores, claim-verification matrices, and PDF/DOCX export. Export is Markdown and run JSON, both generated from the run.
 
 ## Stack
 
-- **Agent core**: hand-rolled tool-use loop (no framework) on OpenAI-compatible chat completions — NVIDIA NIM hosted open-weight models, two-tier routing (large model for planning/synthesis, small for cheap sub-tasks)
-- **Retrieval**: hybrid — web search (Tavily → Brave → Firecrawl fallback chain) + Pinecone vector store with Gemini embeddings and hosted reranking
-- **API**: FastAPI (async, SSE streaming) · **UI**: React + Vite
-- **Evals**: custom harness — labeled question set, LLM-judge + citation-overlap scoring, versioned reports
-- **Observability**: JSONL traces of every tool call, token count, and cost
+| Layer | Choice |
+|---|---|
+| LLM | NVIDIA NIM free endpoints (`deepseek-v4-flash`), OpenAI-compatible client |
+| Web search | Tavily → Serper fallback chain |
+| Embeddings | Google `gemini-embedding-001` (768-dim, cached) |
+| Vector store | Pinecone serverless + hosted reranking |
+| Backend | FastAPI, async, SSE streaming |
+| Frontend | Next.js 16 (App Router), Tailwind, shadcn/ui, Motion |
+| Evals | Custom harness — labelled set, LLM judge, deterministic citation checks |
 
-## Setup
+The whole stack runs on free tiers, which is a real design constraint rather than a footnote: the ~40 req/min model cap is why the rate limiter exists, and the search quota is why the provider chain burns renewable quotas before finite credit pools.
+
+## Running it
 
 ```bash
 cp .env.example .env   # fill in your keys
-cd backend
-python -m venv .venv
-.venv/Scripts/activate  # Windows; use .venv/bin/activate on Unix
-pip install -r requirements.txt
-python scripts/nim_smoke.py  # verify your NIM key + pick model IDs
+```
+
+Backend:
+
+```bash
+cd backend && python -m venv .venv && .venv/Scripts/activate && pip install -r requirements.txt && uvicorn app.main:app --port 8000
+```
+
+Frontend:
+
+```bash
+npm install --prefix web && npm run dev --prefix web
+```
+
+Ingest documents into the corpus:
+
+```bash
+cd backend && python -m app.retrieval.ingest ../docs
+```
+
+Run the evaluation harness:
+
+```bash
+cd backend && python -m app.eval.run_eval --limit 8 --label my-experiment
+```
+
+Tests (44, no network — LLM and search calls are mocked):
+
+```bash
+cd backend && python -m pytest tests/ -q
 ```
