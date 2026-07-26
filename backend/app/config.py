@@ -16,3 +16,15 @@ SMALL_MODEL = os.getenv("SMALL_MODEL", "meta/llama-3.1-8b-instruct")
 
 # NIM free tier is rate-limited (~40 req/min); keep a client-side ceiling below it.
 NIM_MAX_REQUESTS_PER_MINUTE = int(os.getenv("NIM_MAX_REQUESTS_PER_MINUTE", "30"))
+
+# Retrieval / corpus
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
+PINECONE_API_KEY = os.getenv("PINECONE_API_KEY", "")
+COHERE_API_KEY = os.getenv("COHERE_API_KEY", "")
+PINECONE_INDEX = os.getenv("PINECONE_INDEX", "research-agent")
+# gemini-embedding-001 is 3072-dim natively; MRL-truncated to 768 to fit
+# Pinecone's free 2GB and cut query latency. Truncated vectors are re-normalized.
+EMBED_DIM = int(os.getenv("EMBED_DIM", "768"))
+RERANK_ENABLED = os.getenv("RERANK_ENABLED", "true").lower() == "true"
+RETRIEVE_TOP_K = int(os.getenv("RETRIEVE_TOP_K", "10"))
+RERANK_TOP_N = int(os.getenv("RERANK_TOP_N", "4"))

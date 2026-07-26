@@ -111,7 +111,28 @@ errors (httpx.ConnectError) in search adapters weren't wrapped as SearchError,
 so they crashed the item instead of rolling over the provider chain. Fixed the
 same day with a regression test — the eval harness paying for itself on run #1.
 
-## 006 — Smoke-test artifacts stay untracked (2026-07-26)
+## 006 — Hybrid retrieval shipped; two retrieval bugs found and fixed on run #1 (2026-07-27)
+
+**Shipped**: `search_corpus` tool — Gemini embeddings (768-dim MRL-truncated,
+re-normalized, content-hash cached) → Pinecone serverless top-10 → hosted rerank
+to top-4 (Pinecone Inference → Cohere trial → no-rerank failover). The agent now
+holds two tools and routes between public web and the private corpus itself.
+Corpus v1 is this project's own docs — content genuinely absent from the web.
+
+**Bug 1 — corpus snippets truncated at 500 chars**: the first live corpus run
+retrieved the right chunk but the answer sat past the cut ("chain is T…"), so
+the agent re-searched in circles until the step budget died. Corpus chunks ARE
+the evidence; truncating them is self-sabotage. Fixed: full chunk text.
+
+**Bug 2 — no evidence dedup**: 6 corpus searches produced 24 evidence entries
+covering only 4 unique chunks; duplicate URLs now reuse their original citation
+index instead of re-numbering.
+
+**Measured effect** (same question, traces `b351d397` → `145d427c`): 247s → 37.5s
+(6.6x), 7 → 2 LLM calls, budget-exhausted-incomplete → clean correct answer,
+17k → 2.4k input tokens. Both fixes have regression tests.
+
+## 007 — Smoke-test artifacts stay untracked (2026-07-26)
 
 `scripts/nim_smoke_results.json` is gitignored: error payloads embed the NIM
 account identifier, and results are point-in-time measurements, not source.

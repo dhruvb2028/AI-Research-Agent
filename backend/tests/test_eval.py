@@ -38,10 +38,10 @@ def test_judge_parse_garbage_degrades_to_error():
 
 
 def test_load_eval_set_spreads_limit_across_categories():
-    items = load_eval_set(limit=6)
+    items = load_eval_set(limit=8)
     cats = {i["category"] for i in items}
-    assert len(items) == 6
-    assert cats == {"factual", "multi_hop", "adversarial"}
+    assert len(items) == 8
+    assert cats == {"factual", "multi_hop", "adversarial", "corpus"}
 
 
 def test_aggregate_rates():
