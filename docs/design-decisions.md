@@ -64,7 +64,31 @@ behind a thin adapter, losing Brave changed configuration, not architecture.
 **Would change it**: Brave restoring a card-free tier, or a budget making its
 $5/mo the cheapest way to lift the search ceiling (it likely is, if money enters).
 
-## 004 — Smoke-test artifacts stay untracked (2026-07-26)
+## 004 — Large model switched to deepseek-v4-flash after latency collapse (2026-07-27)
+
+**Decision**: `LARGE_MODEL` default moves from `meta/llama-3.3-70b-instruct` to
+`deepseek-ai/deepseek-v4-flash`.
+
+**Evidence**: a full agent run took ~8 minutes wall-clock; the re-probe
+(`scripts/nim_smoke.py`) showed why — the 70B's average latency had collapsed
+from 20.9s (at pin time) to **184s** under free-tier congestion, still 3/3 on
+tool calls but unusable interactively. Alternatives probed the same session:
+- `deepseek-v4-flash`: valid tool calls whenever actually served (~14.5s avg);
+  its one failure was a 503 worker-limit — retryable infrastructure noise that
+  the client's backoff now absorbs, not a model defect.
+- `nvidia/llama-3.3-nemotron-super-49b-v1.5`: fast (8.8s) but 0/3 tool calls
+  emitted — disqualified outright.
+- `moonshotai/kimi-k2.6`: 404 for this account despite being catalog-listed.
+
+**Lesson**: free-tier latency is not a constant — it degrades an order of
+magnitude with load, so model choice needs re-validation, not a one-time pin.
+The config-only switch (one env var) is the portability argument made concrete.
+
+**Would change it**: deepseek 503s becoming chronic rather than transient
+(fallback: re-probe catalog; the 70B remains the reliability baseline), or a
+paid tier removing the queue entirely.
+
+## 005 — Smoke-test artifacts stay untracked (2026-07-26)
 
 `scripts/nim_smoke_results.json` is gitignored: error payloads embed the NIM
 account identifier, and results are point-in-time measurements, not source.

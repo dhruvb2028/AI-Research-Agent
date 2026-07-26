@@ -20,6 +20,7 @@ TRACE_DIR = REPO_ROOT / "traces"
 MODEL_PRICES_PER_M = {
     "meta/llama-3.3-70b-instruct": (0.60, 0.70),
     "meta/llama-3.1-8b-instruct": (0.05, 0.08),
+    "deepseek-ai/deepseek-v4-flash": (0.30, 1.20),  # rough paid-host estimate
 }
 
 

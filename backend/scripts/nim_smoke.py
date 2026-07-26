@@ -19,14 +19,12 @@ from app.config import NIM_API_KEY, NIM_BASE_URL
 
 LARGE_CANDIDATES = [
     "meta/llama-3.3-70b-instruct",
-    "deepseek-ai/deepseek-r1-distill-llama-70b",
-    "qwen/qwen2.5-72b-instruct",
-    "mistralai/mistral-large-2-instruct",
+    "deepseek-ai/deepseek-v4-flash",
+    "moonshotai/kimi-k2.6",
+    "nvidia/llama-3.3-nemotron-super-49b-v1.5",
 ]
 SMALL_CANDIDATES = [
     "meta/llama-3.1-8b-instruct",
-    "qwen/qwen2.5-7b-instruct",
-    "mistralai/mistral-7b-instruct-v0.3",
 ]
 
 SEARCH_TOOL = {
