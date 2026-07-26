@@ -44,6 +44,9 @@ def search_web(query: str, max_results: int = 5, timeout: float = 15.0) -> list[
             "title": r.get("title", ""),
             "snippet": r.get("content", ""),
             "source": "tavily",
+            # Tavily returns a real relevance score; never invent one for
+            # providers that don't (see search_serper).
+            "score": r.get("score"),
         }
         for r in resp.json().get("results", [])
         if r.get("url")

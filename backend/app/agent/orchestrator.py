@@ -70,7 +70,11 @@ Rules:
 - Cite sources inline as [n] matching the numbered evidence you used.
 - If evidence is thin or contradictory, say so explicitly instead of guessing."""
 
-MAX_STEPS = 6  # hard budget: the loop can never run away
+MAX_STEPS = 6  # default hard budget: the loop can never run away
+
+# Research depth maps to the step budget — the only honest lever we have over
+# how much evidence the agent may gather before it must answer.
+DEPTH_BUDGETS = {"quick": 3, "standard": 6, "deep": 12}
 
 
 @dataclass
@@ -90,26 +94,47 @@ def run_agent(
     model: str = LARGE_MODEL,
     tracer: Tracer | None = None,
     on_event=None,
+    max_steps: int = MAX_STEPS,
+    enabled_tools: list[str] | None = None,
 ) -> AgentResult:
-    """on_event(type, payload) — optional live progress hook (SSE streaming)."""
+    """on_event(type, payload) — optional live progress hook (SSE streaming).
+
+    max_steps bounds the loop; enabled_tools restricts which sources the agent
+    may use (both are surfaced as user controls in the UI).
+    """
     tracer = tracer or NoopTracer()
-    llm = llm or LLMClient(tracer=tracer)
+    notify = on_event or (lambda t, p: None)
+    llm = llm or LLMClient(tracer=tracer, on_event=notify)
     if getattr(llm, "tracer", None) is None:
         llm.tracer = tracer
-    tools_map = {"search_web": search, "search_corpus": corpus}
-    notify = on_event or (lambda t, p: None)
-    tracer.event("run_start", question=question, model=model)
-    notify("start", {"question": question, "model": model})
+
+    all_tools = {"search_web": search, "search_corpus": corpus}
+    schemas = {"search_web": SEARCH_TOOL_SCHEMA, "search_corpus": CORPUS_TOOL_SCHEMA}
+    selected = enabled_tools or list(all_tools)
+    tools_map = {k: v for k, v in all_tools.items() if k in selected and v is not None}
+    if not tools_map:
+        raise ValueError("at least one tool must be enabled")
+    tool_schemas = [schemas[k] for k in tools_map]
+
+    tracer.event("run_start", question=question, model=model, max_steps=max_steps)
+    notify(
+        "start",
+        {
+            "question": question,
+            "model": model,
+            "max_steps": max_steps,
+            "tools": list(tools_map),
+        },
+    )
     messages: list[dict] = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": question},
     ]
     evidence: list[dict] = []
 
-    for step in range(1, MAX_STEPS + 1):
-        msg = llm.chat(
-            model=model, messages=messages, tools=[SEARCH_TOOL_SCHEMA, CORPUS_TOOL_SCHEMA]
-        )
+    for step in range(1, max_steps + 1):
+        notify("step", {"step": step, "max_steps": max_steps})
+        msg = llm.chat(model=model, messages=messages, tools=tool_schemas)
         tool_calls = msg.tool_calls or []
 
         if not tool_calls:
@@ -161,11 +186,11 @@ def run_agent(
         }
     )
     msg = llm.chat(model=model, messages=messages)
-    tracer.event("run_end", steps=MAX_STEPS, budget_exhausted=True, **tracer.summary())
+    tracer.event("run_end", steps=max_steps, budget_exhausted=True, **tracer.summary())
     return AgentResult(
         answer=msg.content or "",
         evidence=evidence,
-        steps=MAX_STEPS,
+        steps=max_steps,
         budget_exhausted=True,
         trace=tracer.summary(),
     )

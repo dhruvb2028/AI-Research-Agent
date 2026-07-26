@@ -40,6 +40,8 @@ def search_corpus(query: str, top_k: int = RETRIEVE_TOP_K, top_n: int = RERANK_T
             # them cost a live run its answer (the fact was cut mid-sentence).
             "snippet": c["text"],
             "source": f"corpus/{reranker}",
+            # Cosine similarity from the vector query (pre-rerank), a real score.
+            "score": c["score"],
         }
         for c in top
     ]

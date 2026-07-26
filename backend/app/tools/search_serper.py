@@ -37,6 +37,10 @@ def search_web(query: str, max_results: int = 5, timeout: float = 15.0) -> list[
             "title": r.get("title", ""),
             "snippet": r.get("snippet", ""),
             "source": "serper",
+            # Serper returns SERP rank, not a relevance score. Reporting rank
+            # as a score would be fabrication, so it stays null.
+            "score": None,
+            "rank": r.get("position"),
         }
         for r in resp.json().get("organic", [])
         if r.get("link")

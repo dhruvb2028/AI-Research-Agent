@@ -29,11 +29,14 @@ class LLMClient:
         tracer=None,
         limiter: RateLimiter | None = None,
         sleeper=time.sleep,
+        on_event=None,
     ):
         self._client = OpenAI(base_url=base_url, api_key=api_key)
         self.tracer = tracer
         self._limiter = limiter or RateLimiter(NIM_MAX_REQUESTS_PER_MINUTE)
         self._sleep = sleeper
+        # Optional live-progress hook so retries/waits reach the UI, not just traces.
+        self.on_event = on_event
 
     def chat(
         self,
@@ -57,13 +60,25 @@ class LLMClient:
         resp = self._create_with_retry(kwargs)
         latency = time.time() - start
 
+        usage = resp.usage
+        prompt_tokens = getattr(usage, "prompt_tokens", 0) or 0
+        completion_tokens = getattr(usage, "completion_tokens", 0) or 0
         if self.tracer is not None:
-            usage = resp.usage
             self.tracer.llm_call(
                 model=model,
                 latency_s=latency,
-                prompt_tokens=getattr(usage, "prompt_tokens", 0) or 0,
-                completion_tokens=getattr(usage, "completion_tokens", 0) or 0,
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+            )
+        if self.on_event is not None:
+            self.on_event(
+                "llm",
+                {
+                    "model": model,
+                    "latency_s": round(latency, 2),
+                    "prompt_tokens": prompt_tokens,
+                    "completion_tokens": completion_tokens,
+                },
             )
         return resp.choices[0].message
 
@@ -79,5 +94,15 @@ class LLMClient:
                 if self.tracer is not None:
                     self.tracer.event(
                         "llm_retry", attempt=attempt, delay_s=delay, error=type(e).__name__
+                    )
+                if self.on_event is not None:
+                    self.on_event(
+                        "retry",
+                        {
+                            "attempt": attempt,
+                            "max_attempts": MAX_ATTEMPTS,
+                            "delay_s": delay,
+                            "error": type(e).__name__,
+                        },
                     )
                 self._sleep(delay)

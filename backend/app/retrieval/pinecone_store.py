@@ -34,6 +34,19 @@ class PineconeStore:
             )
         self._index = self._pc.Index(index_name)
 
+    def describe(self) -> dict:
+        """Live index stats — vector count and dimension as Pinecone reports them."""
+        stats = self._index.describe_index_stats()
+        namespaces = {
+            name: {"vectors": ns.get("vector_count", 0)}
+            for name, ns in (stats.get("namespaces") or {}).items()
+        }
+        return {
+            "vectors": stats.get("total_vector_count", 0),
+            "dimension": stats.get("dimension", self._dim),
+            "namespaces": namespaces,
+        }
+
     def upsert_chunks(self, chunks: list[dict], vectors: list[list[float]]) -> int:
         payload = [
             {
