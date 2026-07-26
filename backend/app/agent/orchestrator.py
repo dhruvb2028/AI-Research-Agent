@@ -89,13 +89,17 @@ def run_agent(
     corpus=search_corpus,
     model: str = LARGE_MODEL,
     tracer: Tracer | None = None,
+    on_event=None,
 ) -> AgentResult:
+    """on_event(type, payload) — optional live progress hook (SSE streaming)."""
     tracer = tracer or NoopTracer()
     llm = llm or LLMClient(tracer=tracer)
     if getattr(llm, "tracer", None) is None:
         llm.tracer = tracer
     tools_map = {"search_web": search, "search_corpus": corpus}
+    notify = on_event or (lambda t, p: None)
     tracer.event("run_start", question=question, model=model)
+    notify("start", {"question": question, "model": model})
     messages: list[dict] = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": question},
@@ -133,13 +137,18 @@ def run_agent(
         )
 
         for tc in tool_calls:
-            messages.append(
+            before = len(evidence)
+            content = _execute_tool(tc, tools_map, evidence, tracer)
+            notify(
+                "tool",
                 {
-                    "role": "tool",
-                    "tool_call_id": tc.id,
-                    "content": _execute_tool(tc, tools_map, evidence, tracer),
-                }
+                    "step": step,
+                    "tool": tc.function.name,
+                    "arguments": tc.function.arguments,
+                    "new_evidence": evidence[before:],
+                },
             )
+            messages.append({"role": "tool", "tool_call_id": tc.id, "content": content})
 
     # Budget hit: force a synthesis from whatever evidence exists.
     messages.append(
