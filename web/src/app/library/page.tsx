@@ -1,6 +1,7 @@
 "use client";
 
-import { CircleAlert, RotateCcw, TriangleAlert } from "lucide-react";
+import { ChevronRight, CircleAlert, RotateCcw, TriangleAlert } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -26,6 +27,7 @@ function when(ts: number) {
 }
 
 export default function LibraryPage() {
+  const router = useRouter();
   const [runs, setRuns] = useState<RunSummary[] | null>(null);
   const [error, setError] = useState("");
 
@@ -84,9 +86,16 @@ export default function LibraryPage() {
             </TableHeader>
             <TableBody>
               {runs.map((r) => (
-                <TableRow key={r.run_id}>
+                <TableRow
+                  key={r.run_id}
+                  onClick={() => router.push(`/library/${r.run_id}`)}
+                  className="cursor-pointer"
+                >
                   <TableCell className="max-w-[320px]">
-                    <div className="truncate text-sm">{r.question || "—"}</div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="truncate text-sm">{r.question || "—"}</span>
+                      <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
+                    </div>
                     <div className="font-mono text-[11px] text-muted-foreground">
                       {r.run_id}
                     </div>

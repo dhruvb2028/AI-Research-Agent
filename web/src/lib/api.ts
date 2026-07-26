@@ -85,6 +85,33 @@ export interface RunSummary {
   completion_tokens: number | null;
 }
 
+/** One recorded activity event from a past run's trace file. */
+export interface TimelineEvent {
+  type: "llm_call" | "tool_call" | "tool_error" | "llm_retry";
+  offset_s: number;
+  model?: string;
+  latency_s?: number;
+  prompt_tokens?: number;
+  completion_tokens?: number;
+  est_cost_usd?: number;
+  tool?: string;
+  query?: string;
+  results?: number;
+  provider?: string | null;
+  error?: string;
+  attempt?: number;
+  delay_s?: number;
+}
+
+export interface RunDetail extends RunSummary {
+  max_steps: number | null;
+  /** null for runs recorded before results were persisted. */
+  answer: string | null;
+  evidence: Evidence[];
+  trace: TraceSummary;
+  timeline: TimelineEvent[];
+}
+
 export interface EvalReport {
   id: string;
   date: string;
@@ -124,7 +151,7 @@ async function getJSON<T>(path: string): Promise<T> {
 
 export const getConfig = () => getJSON<AgentConfig>("/config");
 export const getRuns = () => getJSON<RunSummary[]>("/runs");
-export const getRun = (id: string) => getJSON<RunSummary & { events: unknown[] }>(`/runs/${id}`);
+export const getRun = (id: string) => getJSON<RunDetail>(`/runs/${id}`);
 export const getEvals = () => getJSON<EvalReport[]>("/evals");
 export const getCorpus = () => getJSON<CorpusStats>("/corpus");
 

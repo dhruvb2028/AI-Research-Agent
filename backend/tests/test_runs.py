@@ -53,5 +53,43 @@ def test_list_and_get(tmp_path):
     _write_trace(tmp_path, "r1", [{"ts": 1.0, "run_id": "r1", "type": "run_start", "question": "a"}])
     _write_trace(tmp_path, "r2", [{"ts": 2.0, "run_id": "r2", "type": "run_start", "question": "b"}])
     assert len(list_runs(trace_dir=tmp_path)) == 2
-    assert get_run("r1", trace_dir=tmp_path)["events"][0]["type"] == "run_start"
+    assert get_run("r1", trace_dir=tmp_path)["question"] == "a"
     assert get_run("nope", trace_dir=tmp_path) is None
+
+
+def test_get_run_returns_persisted_result_and_timeline(tmp_path):
+    _write_trace(
+        tmp_path,
+        "full1",
+        [
+            {"ts": 100.0, "run_id": "full1", "type": "run_start", "question": "q?",
+             "model": "m", "max_steps": 6},
+            {"ts": 102.0, "run_id": "full1", "type": "llm_call", "model": "m",
+             "latency_s": 2.0, "prompt_tokens": 10, "completion_tokens": 5},
+            {"ts": 103.0, "run_id": "full1", "type": "tool_call", "tool": "search_web",
+             "latency_s": 1.0, "query": "x", "results": 3, "provider": "tavily"},
+            {"ts": 108.0, "run_id": "full1", "type": "result", "answer": "The answer [1].",
+             "evidence": [{"url": "https://a.com", "title": "A", "snippet": "s", "source": "tavily"}]},
+            {"ts": 108.1, "run_id": "full1", "type": "run_end", "steps": 2,
+             "budget_exhausted": False, "llm_calls": 1, "est_cost_usd": 0.001},
+        ],
+    )
+    run = get_run("full1", trace_dir=tmp_path)
+    assert run["answer"] == "The answer [1]."
+    assert run["evidence"][0]["url"] == "https://a.com"
+    assert run["max_steps"] == 6
+    assert run["trace"]["llm_calls"] == 1
+    # Timeline keeps only activity events, stamped with offsets from run start.
+    assert [e["type"] for e in run["timeline"]] == ["llm_call", "tool_call"]
+    assert run["timeline"][0]["offset_s"] == 2.0
+
+
+def test_get_run_without_persisted_result_reports_none(tmp_path):
+    _write_trace(
+        tmp_path,
+        "old1",
+        [{"ts": 1.0, "run_id": "old1", "type": "run_start", "question": "q", "model": "m"}],
+    )
+    run = get_run("old1", trace_dir=tmp_path)
+    assert run["answer"] is None
+    assert run["evidence"] == []

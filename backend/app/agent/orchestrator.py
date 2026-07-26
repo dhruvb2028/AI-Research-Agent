@@ -138,9 +138,13 @@ def run_agent(
         tool_calls = msg.tool_calls or []
 
         if not tool_calls:
+            answer = msg.content or ""
+            # Persist the result into the trace so a past run stays fully
+            # inspectable — without this, history has metrics but no answer.
+            tracer.event("result", answer=answer, evidence=evidence)
             tracer.event("run_end", steps=step, budget_exhausted=False, **tracer.summary())
             return AgentResult(
-                answer=msg.content or "", evidence=evidence, steps=step, trace=tracer.summary()
+                answer=answer, evidence=evidence, steps=step, trace=tracer.summary()
             )
 
         messages.append(
@@ -186,9 +190,11 @@ def run_agent(
         }
     )
     msg = llm.chat(model=model, messages=messages)
+    answer = msg.content or ""
+    tracer.event("result", answer=answer, evidence=evidence)
     tracer.event("run_end", steps=max_steps, budget_exhausted=True, **tracer.summary())
     return AgentResult(
-        answer=msg.content or "",
+        answer=answer,
         evidence=evidence,
         steps=max_steps,
         budget_exhausted=True,

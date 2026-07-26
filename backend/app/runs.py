@@ -62,10 +62,46 @@ def list_runs(limit: int = 50, trace_dir: Path = TRACE_DIR) -> list[dict]:
 
 
 def get_run(run_id: str, trace_dir: Path = TRACE_DIR) -> dict | None:
+    """Full detail for one run: summary, persisted result, and its event log.
+
+    Runs recorded before results were persisted return answer=None rather than
+    a reconstruction — history reports what was logged, nothing more.
+    """
     path = trace_dir / f"{run_id}.jsonl"
     if not path.exists():
         return None
     summary = summarize(path)
     if summary is None:
         return None
-    return {**summary, "events": _read_events(path)}
+
+    events = _read_events(path)
+    result = next((e for e in events if e["type"] == "result"), None)
+    end = next((e for e in events if e["type"] == "run_end"), None)
+    start = next((e for e in events if e["type"] == "run_start"), None)
+    t0 = start["ts"] if start else events[0]["ts"]
+
+    timeline = [
+        {**e, "offset_s": round(e["ts"] - t0, 2)}
+        for e in events
+        if e["type"] in ("llm_call", "tool_call", "tool_error", "llm_retry")
+    ]
+
+    return {
+        **summary,
+        "max_steps": (start or {}).get("max_steps"),
+        "answer": (result or {}).get("answer"),
+        "evidence": (result or {}).get("evidence", []),
+        "trace": {
+            k: (end or {}).get(k)
+            for k in (
+                "llm_calls",
+                "llm_seconds",
+                "tool_calls",
+                "tool_seconds",
+                "prompt_tokens",
+                "completion_tokens",
+                "est_cost_usd",
+            )
+        },
+        "timeline": timeline,
+    }
