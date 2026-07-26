@@ -28,3 +28,4 @@ backend/scripts/nim_smoke_results.json
 Thumbs.db
 .idea/
 .vscode/
+*.tsbuildinfo
