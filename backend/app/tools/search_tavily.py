@@ -5,11 +5,9 @@ import os
 
 import httpx
 
+from app.tools.base import SearchError
+
 TAVILY_ENDPOINT = "https://api.tavily.com/search"
-
-
-class SearchError(Exception):
-    """Raised when the search provider fails or is misconfigured."""
 
 
 def search_web(query: str, max_results: int = 5, timeout: float = 15.0) -> list[dict]:

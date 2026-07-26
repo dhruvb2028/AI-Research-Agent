@@ -40,7 +40,31 @@ to probe if it persists: `deepseek-ai/deepseek-v4-flash`, `moonshotai/kimi-k2.6`
 is not observable via the API — budget eval passes conservatively (small routine
 subset, rare full runs).
 
-## 003 — Smoke-test artifacts stay untracked (2026-07-26)
+## 003 — Brave cut from the search fallback chain (2026-07-26)
+
+**Decision**: The web-search fallback chain is Tavily (1,000 credits/mo, renewable)
+→ Firecrawl (~100k one-time credit pool). Brave Search API — originally planned as
+the middle tier — is out.
+
+**How we found out**: the first live end-to-end run of the agent was a question
+about search-API free tiers. Its own cited answer surfaced that Brave discontinued
+its free tier in early 2026: new users get $5/month in metered credits (~1,000
+queries) and the card collected at signup becomes an active billing instrument
+with **no spending cap**. Verified against multiple independent sources. That
+uncapped-billing shape violates this project's hard $0 constraint.
+
+**Why the ordering**: the renewable quota burns first, the finite pool last —
+spend income before savings. When the whole chain is exhausted, the agent answers
+from the local corpus only and flags reduced coverage rather than failing.
+
+**Lesson recorded**: free tiers drift. Provider assumptions get re-verified at
+integration time, not trusted from planning docs — and because every provider sits
+behind a thin adapter, losing Brave changed configuration, not architecture.
+
+**Would change it**: Brave restoring a card-free tier, or a budget making its
+$5/mo the cheapest way to lift the search ceiling (it likely is, if money enters).
+
+## 004 — Smoke-test artifacts stay untracked (2026-07-26)
 
 `scripts/nim_smoke_results.json` is gitignored: error payloads embed the NIM
 account identifier, and results are point-in-time measurements, not source.

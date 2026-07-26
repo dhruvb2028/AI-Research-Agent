@@ -2,7 +2,7 @@
 from types import SimpleNamespace
 
 from app.agent.orchestrator import MAX_STEPS, AgentResult, run_agent
-from app.tools.search_tavily import SearchError
+from app.tools.base import SearchError
 
 
 def _msg(content=None, tool_calls=None):

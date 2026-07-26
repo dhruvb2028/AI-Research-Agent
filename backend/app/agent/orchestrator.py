@@ -12,7 +12,8 @@ from dataclasses import dataclass, field
 
 from app.config import LARGE_MODEL
 from app.llm import LLMClient
-from app.tools.search_tavily import SearchError, search_web
+from app.tools.base import SearchError
+from app.tools.search import search_web
 
 SEARCH_TOOL_SCHEMA = {
     "type": "function",
