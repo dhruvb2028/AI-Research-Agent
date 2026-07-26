@@ -1,0 +1,30 @@
+# Secrets — never commit API keys
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node / frontend
+node_modules/
+frontend/dist/
+
+# Local artifacts
+traces/
+*.jsonl.tmp
+.embedding_cache/
+backend/scripts/nim_smoke_results.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
