@@ -19,12 +19,15 @@ def search_web(query: str, max_results: int = 5, timeout: float = 15.0) -> list[
     if not api_key:
         raise SearchError("SERPER_API_KEY missing from .env")
 
-    resp = httpx.post(
-        SERPER_ENDPOINT,
-        headers={"X-API-KEY": api_key, "Content-Type": "application/json"},
-        json={"q": query, "num": max_results},
-        timeout=timeout,
-    )
+    try:
+        resp = httpx.post(
+            SERPER_ENDPOINT,
+            headers={"X-API-KEY": api_key, "Content-Type": "application/json"},
+            json={"q": query, "num": max_results},
+            timeout=timeout,
+        )
+    except httpx.HTTPError as e:
+        raise SearchError(f"Serper network error: {type(e).__name__}: {e}") from e
     if resp.status_code != 200:
         raise SearchError(f"Serper returned {resp.status_code}: {resp.text[:200]}")
 

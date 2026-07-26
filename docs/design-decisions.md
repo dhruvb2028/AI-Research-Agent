@@ -88,7 +88,30 @@ The config-only switch (one env var) is the portability argument made concrete.
 (fallback: re-probe catalog; the 70B remains the reliability baseline), or a
 paid tier removing the queue entirely.
 
-## 005 — Smoke-test artifacts stay untracked (2026-07-26)
+## 005 — First full eval baseline: 29/29 pass, and what that actually means (2026-07-27)
+
+**Result** (report `20260726-2027-baseline-full-4ec4dcf`): 30 items, 29 scored —
+100% correctness, 100% citation faithfulness, 0 dangling citations, avg 57.5s,
+avg would-be cost $0.0023/query. 1 item errored on a transient DNS failure.
+
+**Judge calibration spot-check**: adversarial verdicts were hand-read rather
+than trusted — the ambiguous-origin, no-prediction, and disambiguation answers
+were genuinely correct, and one suspected judge-leniency case (a05, telephone)
+turned out to be a truncated-reading error on my side, not the judge's: the
+answer did cover Gray/Meucci. Judge (llama-3.1-8b) held up on this sample.
+
+**The honest caveat**: a 100%-pass eval has no discriminating power as a
+regression instrument — it means the set's ceiling is below the agent's current
+ability, not that the agent is perfect. Next hardening pass: obscure multi-hop
+chains, recency-sensitive questions, and contradiction-heavy topics to create
+headroom above the current score.
+
+**Bug the baseline caught**: the DNS-failure item revealed that raw network
+errors (httpx.ConnectError) in search adapters weren't wrapped as SearchError,
+so they crashed the item instead of rolling over the provider chain. Fixed the
+same day with a regression test — the eval harness paying for itself on run #1.
+
+## 006 — Smoke-test artifacts stay untracked (2026-07-26)
 
 `scripts/nim_smoke_results.json` is gitignored: error payloads embed the NIM
 account identifier, and results are point-in-time measurements, not source.

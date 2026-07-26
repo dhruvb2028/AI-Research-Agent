@@ -37,3 +37,19 @@ def test_all_failed_raises_with_reasons():
         search_web("q", providers=[("p1", _fails), ("p2", _empty)])
     assert "p1: quota exhausted" in str(exc.value)
     assert "p2: returned no results" in str(exc.value)
+
+
+def test_network_errors_become_search_errors(monkeypatch):
+    import httpx
+
+    from app.tools import search_serper, search_tavily
+
+    def _boom(*a, **k):
+        raise httpx.ConnectError("getaddrinfo failed")
+
+    monkeypatch.setenv("TAVILY_API_KEY", "x")
+    monkeypatch.setenv("SERPER_API_KEY", "x")
+    monkeypatch.setattr(httpx, "post", _boom)
+    for fn in (search_tavily.search_web, search_serper.search_web):
+        with pytest.raises(SearchError, match="network error"):
+            fn("q")
