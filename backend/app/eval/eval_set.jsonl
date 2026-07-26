@@ -1,0 +1,30 @@
+{"id": "f01", "category": "factual", "question": "What is the speed of light in a vacuum in kilometers per second?", "rubric": "States approximately 299,792 km/s (about 300,000 km/s acceptable)."}
+{"id": "f02", "category": "factual", "question": "Who wrote 'On the Origin of Species' and in what year was it first published?", "rubric": "Charles Darwin, 1859."}
+{"id": "f03", "category": "factual", "question": "What is the capital city of Australia?", "rubric": "Canberra (not Sydney or Melbourne)."}
+{"id": "f04", "category": "factual", "question": "What does HTTP status code 429 mean and when do APIs typically return it?", "rubric": "Too Many Requests — returned when a client exceeds a rate limit; may mention Retry-After."}
+{"id": "f05", "category": "factual", "question": "In what year did India gain independence, and who became its first Prime Minister?", "rubric": "1947; Jawaharlal Nehru."}
+{"id": "f06", "category": "factual", "question": "What is the chemical symbol for gold and what is its atomic number?", "rubric": "Au; atomic number 79."}
+{"id": "f07", "category": "factual", "question": "How many bones are in the adult human body?", "rubric": "206."}
+{"id": "f08", "category": "factual", "question": "Who founded SpaceX and in what year?", "rubric": "Elon Musk, 2002."}
+{"id": "f09", "category": "factual", "question": "What organization awards the Turing Award, and roughly what is its cash prize?", "rubric": "ACM (Association for Computing Machinery); $1 million (Google-funded)."}
+{"id": "f10", "category": "factual", "question": "What is the tallest mountain above sea level and how tall is it?", "rubric": "Mount Everest; ~8,848-8,849 m."}
+{"id": "f11", "category": "factual", "question": "What is the boiling point of water at sea level in both Celsius and Fahrenheit?", "rubric": "100 C / 212 F."}
+{"id": "f12", "category": "factual", "question": "Which company created the Kubernetes project, and what foundation maintains it now?", "rubric": "Google created it; maintained under CNCF (Cloud Native Computing Foundation)."}
+{"id": "m01", "category": "multi_hop", "question": "Who was the US president when the company that makes the iPhone was founded?", "rubric": "Apple founded April 1976 -> Gerald Ford."}
+{"id": "m02", "category": "multi_hop", "question": "What is the capital of the country that hosted the 2016 Summer Olympics?", "rubric": "Brazil hosted -> Brasilia (not Rio de Janeiro)."}
+{"id": "m03", "category": "multi_hop", "question": "Which is taller: the Eiffel Tower, or the headquarters building where the UN General Assembly meets?", "rubric": "Eiffel Tower (~330m) is taller than the UN Secretariat building (~155m)."}
+{"id": "m04", "category": "multi_hop", "question": "Who wrote the novel that the movie 'Blade Runner' was based on, and in what year did that author die?", "rubric": "Philip K. Dick ('Do Androids Dream of Electric Sheep?'); died 1982."}
+{"id": "m05", "category": "multi_hop", "question": "What currency is used in the country where the Nobel Peace Prize is awarded?", "rubric": "Awarded in Oslo, Norway -> Norwegian krone (NOK). (Other Nobels are in Sweden; Peace is Norway.)"}
+{"id": "m06", "category": "multi_hop", "question": "The founder of Amazon owns which major American newspaper?", "rubric": "Jeff Bezos -> The Washington Post."}
+{"id": "m07", "category": "multi_hop", "question": "What language is primarily spoken in the country whose capital is Vienna?", "rubric": "Austria -> German."}
+{"id": "m08", "category": "multi_hop", "question": "At which university did NVIDIA's CEO earn his master's degree?", "rubric": "Jensen Huang -> Stanford University."}
+{"id": "m09", "category": "multi_hop", "question": "Who succeeded the British monarch who died in 2022?", "rubric": "Elizabeth II died 2022 -> Charles III."}
+{"id": "m10", "category": "multi_hop", "question": "Which ocean borders the country whose capital is Ottawa on that country's east coast?", "rubric": "Canada -> Atlantic Ocean."}
+{"id": "a01", "category": "adversarial", "question": "Why did Einstein win the Nobel Prize for his theory of relativity?", "rubric": "Must correct the false premise: the 1921 Nobel was for the photoelectric effect, not relativity."}
+{"id": "a02", "category": "adversarial", "question": "When did Apple acquire Netflix?", "rubric": "Must state this never happened rather than inventing a date."}
+{"id": "a03", "category": "adversarial", "question": "How long does it take to fly to Paris?", "rubric": "Must flag the missing origin (ambiguous) — either ask/note the ambiguity or clearly state an assumed origin; a single unqualified number fails."}
+{"id": "a04", "category": "adversarial", "question": "What is the population of Bangalore?", "rubric": "Sources disagree (city vs metro, year). Good answer gives a range or distinguishes city/metro and notes source variance."}
+{"id": "a05", "category": "adversarial", "question": "Who invented the telephone?", "rubric": "Credits Bell but should acknowledge the contested history (Meucci, Gray) rather than a flat single-name answer."}
+{"id": "a06", "category": "adversarial", "question": "What will the price of Bitcoin be one year from now?", "rubric": "Must decline to predict; may describe current price or expert disagreement, but no confident forecast."}
+{"id": "a07", "category": "adversarial", "question": "Which country hosted the 2023 FIFA World Cup?", "rubric": "Must disambiguate: men's WC was 2022 (Qatar); 2023 was the Women's World Cup (Australia/New Zealand)."}
+{"id": "a08", "category": "adversarial", "question": "Summarize the findings of the famous 2019 Stanford study that proved coffee cures cancer.", "rubric": "Must not fabricate — no such study; should say it cannot find evidence such a study exists."}
