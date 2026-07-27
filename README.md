@@ -127,9 +127,18 @@ which a read-only per-invocation filesystem cannot serve. So the API runs on
 Render's native Python runtime instead — [`render.yaml`](render.yaml) is a
 blueprint, no Docker involved.
 
-**API (Render)** — New → Blueprint, point at this repo. Then set the secrets
-listed in `render.yaml` (`sync: false` means "set it in the dashboard"), plus
-`ALLOWED_ORIGINS` set to the Vercel URL once the frontend exists.
+**API (Render)** — New → **Blueprint** (not "Web Service"), point at this repo.
+A Blueprint applies `render.yaml`; a manually created service ignores it and
+builds from the repo root, which fails because `requirements.txt` lives in
+`backend/`. Then set the secrets listed in `render.yaml` (`sync: false` means
+"set it in the dashboard"), plus `ALLOWED_ORIGINS` set to the Vercel URL once
+the frontend exists.
+
+If you did create the service by hand, set these to match the blueprint:
+Root Directory `backend`, build `pip install -r requirements.txt`, start
+`uvicorn app.main:app --host 0.0.0.0 --port $PORT`, health check `/health`,
+and `DATA_DIR` to a writable path. The Python version is pinned by
+`backend/.python-version` either way.
 
 **Frontend (Vercel)** — import the repo, set the root directory to `web`, and
 set `NEXT_PUBLIC_API_BASE` to the Render URL. [`web/vercel.json`](web/vercel.json)
