@@ -16,12 +16,13 @@ import queue
 import threading
 from typing import Literal
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from app import evals, runs
+from app.documents import DocumentError, ingest_document
 from app.agent.orchestrator import DEPTH_BUDGETS, run_agent
 from app.config import LARGE_MODEL, PINECONE_INDEX, RERANK_TOP_N, RETRIEVE_TOP_K
 from app.tracing.trace_logger import Tracer
@@ -95,6 +96,32 @@ def corpus_stats() -> dict:
         return {"available": True, "index": PINECONE_INDEX, **stats}
     except Exception as e:  # noqa: BLE001 — corpus is optional; report why it's unavailable
         return {"available": False, "index": PINECONE_INDEX, "error": f"{type(e).__name__}: {e}"}
+
+
+@app.post("/corpus/documents")
+async def upload_document(file: UploadFile = File(...)) -> dict:
+    """Index an uploaded document so the agent can search it."""
+    raw = await file.read()
+    try:
+        return ingest_document(file.filename or "untitled", raw)
+    except DocumentError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+    except Exception as e:  # noqa: BLE001 — surface indexing failures verbatim
+        raise HTTPException(status_code=502, detail=f"{type(e).__name__}: {e}") from e
+
+
+@app.delete("/corpus/documents/{doc}")
+def delete_document(doc: str) -> dict:
+    """Remove a document and all of its chunks from the index."""
+    try:
+        from app.retrieval.pinecone_store import PineconeStore
+
+        deleted = PineconeStore().delete_document(doc)
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(status_code=502, detail=f"{type(e).__name__}: {e}") from e
+    if deleted == 0:
+        raise HTTPException(status_code=404, detail="document not found")
+    return {"doc": doc, "chunks_deleted": deleted}
 
 
 @app.post("/research")

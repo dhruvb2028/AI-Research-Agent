@@ -57,7 +57,7 @@ function EventRow({ e }: { e: TimelineEvent }) {
           <>
             <div className="flex items-center gap-2">
               <span className="text-sm">
-                {e.tool === "search_corpus" ? "Searched project docs" : "Searched the web"}
+                {e.tool === "search_corpus" ? "Searched your documents" : "Searched the web"}
               </span>
               {e.provider && (
                 <Badge variant="secondary" className="h-5 font-mono text-[10px] font-normal">

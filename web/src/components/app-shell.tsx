@@ -26,7 +26,7 @@ const NAV = [
   { href: "/", label: "Research", icon: Compass, hint: "Run the agent" },
   { href: "/library", label: "Library", icon: History, hint: "Past runs, from trace logs" },
   { href: "/evaluation", label: "Evaluation", icon: FlaskConical, hint: "Measured quality reports" },
-  { href: "/corpus", label: "Project docs", icon: Database, hint: "Documents the agent can search" },
+  { href: "/corpus", label: "Your documents", icon: Database, hint: "Upload documents for the agent to search" },
 ];
 
 function ThemeToggle({ collapsed }: { collapsed: boolean }) {

@@ -75,7 +75,7 @@ export function SourcesTable({
           <SelectContent>
             <SelectItem value="all">All types</SelectItem>
             <SelectItem value="web">Web</SelectItem>
-            <SelectItem value="corpus">Project docs</SelectItem>
+            <SelectItem value="corpus">Your documents</SelectItem>
           </SelectContent>
         </Select>
         <Select value={usage} onValueChange={(v) => setUsage(v ?? "all")}>

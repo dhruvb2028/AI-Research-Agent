@@ -157,6 +157,27 @@ export const getRun = (id: string) => getJSON<RunDetail>(`/runs/${id}`);
 export const getEvals = () => getJSON<EvalReport[]>("/evals");
 export const getCorpus = () => getJSON<CorpusStats>("/corpus");
 
+export async function uploadDocument(
+  file: File,
+): Promise<{ doc: string; chunks: number; characters: number }> {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch(`${API_BASE}/corpus/documents`, { method: "POST", body: form });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.detail ?? `upload failed (${res.status})`);
+  return body;
+}
+
+export async function deleteDocument(doc: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/corpus/documents/${encodeURIComponent(doc)}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.detail ?? `delete failed (${res.status})`);
+  }
+}
+
 /**
  * Streams a research run. EventSource is GET-only, so we read the POST body
  * stream and parse SSE blocks ourselves.
@@ -204,7 +225,7 @@ export function citedIndices(answer: string): Set<number> {
 }
 
 export function providerLabel(source: string): string {
-  if (source.startsWith("corpus/")) return "project docs";
+  if (source.startsWith("corpus/")) return "your documents";
   return source;
 }
 

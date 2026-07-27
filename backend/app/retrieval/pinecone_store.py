@@ -84,6 +84,17 @@ class PineconeStore:
             self._index.upsert(vectors=payload[b : b + 100])
         return len(payload)
 
+    def delete_document(self, doc: str) -> int:
+        """Remove every chunk belonging to one document. Returns chunks deleted."""
+        ids = [
+            (item.id if hasattr(item, "id") else str(item))
+            for batch in self._index.list(prefix=f"{doc}::")
+            for item in batch
+        ]
+        if ids:
+            self._index.delete(ids=ids)
+        return len(ids)
+
     def query(self, vector: list[float], top_k: int) -> list[dict]:
         res = self._index.query(vector=vector, top_k=top_k, include_metadata=True)
         return [

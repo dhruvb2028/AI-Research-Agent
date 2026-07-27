@@ -36,6 +36,18 @@ def chunk_text(text: str, chunk_chars: int = CHUNK_CHARS, overlap: int = OVERLAP
     return [c for c in chunks if c]
 
 
+def chunk_document(name: str, text: str) -> list[dict]:
+    """Chunk raw document text into records with stable, name-derived ids.
+
+    Ids are deterministic, so re-uploading the same document overwrites its
+    chunks instead of duplicating them.
+    """
+    return [
+        {"id": f"{name}::chunk{i}", "doc": name, "chunk_index": i, "text": c}
+        for i, c in enumerate(chunk_text(text))
+    ]
+
+
 def chunk_file(path: Path) -> list[dict]:
     """Chunk one text/markdown file into records with stable ids."""
     text = path.read_text(encoding="utf-8", errors="replace")

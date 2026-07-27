@@ -30,11 +30,10 @@ const SOURCES: { id: ToolName; label: string; hint: string; icon: typeof Globe }
   },
   {
     id: "search_corpus",
-    label: "Project docs",
+    label: "Your documents",
     hint:
-      "This project's own engineering decision log, indexed for semantic search. " +
-      "Ask why a provider was dropped or a model swapped and the answer is cited " +
-      "from documents that are not on the public web.",
+      "Search documents you have uploaded, by meaning rather than keywords. " +
+      "Manage them on the Your documents page.",
     icon: Database,
   },
 ];
