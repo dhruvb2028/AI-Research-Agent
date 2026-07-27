@@ -12,6 +12,7 @@ a queue so the stream stays live during long LLM calls.
 from __future__ import annotations
 
 import json
+import os
 import queue
 import threading
 from typing import Literal
@@ -28,10 +29,23 @@ from app.config import LARGE_MODEL, PINECONE_INDEX, RERANK_TOP_N, RETRIEVE_TOP_K
 from app.tracing.trace_logger import Tracer
 
 app = FastAPI(title="Research Agent")
+
+# Locked to known origins by default. This API has no authentication, and the
+# upload endpoint spends a real (if free) embedding quota, so a wildcard origin
+# on a public deployment would let any page burn it. Set ALLOWED_ORIGINS to the
+# deployed frontend URL rather than widening this.
+ALLOWED_ORIGINS = [
+    o.strip()
+    for o in os.getenv(
+        "ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000"
+    ).split(",")
+    if o.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # demo deployment; lock to the frontend origin in production
-    allow_methods=["*"],
+    allow_origins=ALLOWED_ORIGINS,
+    allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["*"],
 )
 

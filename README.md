@@ -112,7 +112,7 @@ Run the evaluation harness:
 cd backend && python -m app.eval.run_eval --limit 8 --label my-experiment
 ```
 
-Tests (51, no network — LLM, search and embedding calls are mocked):
+Tests (54, no network — LLM, search and embedding calls are mocked):
 
 ```bash
 cd backend && python -m pytest tests/ -q

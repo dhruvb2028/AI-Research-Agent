@@ -224,10 +224,6 @@ export function citedIndices(answer: string): Set<number> {
   return new Set(Array.from(answer.matchAll(/\[(\d+)\]/g), (m) => Number(m[1])));
 }
 
-export function providerLabel(source: string): string {
-  if (source.startsWith("corpus/")) return "your documents";
-  return source;
-}
 
 export function isCorpus(e: Evidence): boolean {
   return e.url.startsWith("corpus://");

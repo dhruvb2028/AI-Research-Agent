@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUp, Globe, Loader2, Database, Square } from "lucide-react";
+import { ArrowUp, Database, Globe, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -169,11 +169,3 @@ export function ResearchForm({
   );
 }
 
-export function RunningIndicator({ label }: { label: string }) {
-  return (
-    <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-      <Loader2 className="size-3.5 animate-spin text-primary" />
-      {label}
-    </span>
-  );
-}
