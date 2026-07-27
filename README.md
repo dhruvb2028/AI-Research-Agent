@@ -1,6 +1,6 @@
 # AI Research Agent
 
-An agentic research assistant that plans its own searches, gathers evidence from the live web and a private document corpus, and answers with citations you can trace back to the exact passage the model read.
+An agentic research assistant that plans its own searches, gathers evidence from the live web and from documents you upload, and answers with citations you can trace back to the exact passage the model read.
 
 The point of the project is not the demo — it is the **measurement**. Every architecture change is scored against a labelled evaluation set, every run writes a trace, and the UI is built so that a reviewer can inspect *why* an answer says what it says.
 
@@ -21,7 +21,7 @@ Latest full evaluation run — [`baseline-full` @ `4ec4dcf`](backend/app/eval/re
 | factual | 12/12 | 100% | 100% | 34.9s |
 | multi_hop | 9/10 | 100% | 100% | 40.0s |
 | adversarial | 8/8 | 100% | 100% | 113.2s |
-| corpus ([separate run](backend/app/eval/reports/20260726-2120-corpus-check-625ad49.md)) | 3/3 | 100% | 100% | 264.0s |
+| documents ([separate run](backend/app/eval/reports/20260726-2120-corpus-check-625ad49.md)) | 3/3 | 100% | 100% | 264.0s |
 
 **How to read this honestly.** A 100% pass rate on a 30-question set is a *regression guard*, not proof of general correctness — it means the set's difficulty ceiling currently sits below the agent's ability. It is useful for catching a change that breaks something, and not much else. The set is being hardened with obscure multi-hop chains and recency-sensitive questions to create headroom. One item in the baseline errored on a transient DNS failure, which is counted as an error rather than quietly dropped — and that failure is what exposed a real bug (see below).
 
@@ -30,7 +30,7 @@ Every report is stamped with the commit it ran against, so any movement in these
 ### What evaluation actually caught
 
 - **Unwrapped network errors** — the DNS failure in the baseline run revealed that raw `httpx` errors in the search adapters crashed the whole item instead of rolling over to the next provider. Fixed with a regression test on run #1 of the harness.
-- **Truncated corpus evidence** — corpus snippets were being cut at 500 characters, so the agent retrieved the right chunk but the answer sat past the cut and it searched in circles until the step budget died. Fixing that plus evidence de-duplication took the same question from **247s → 37.5s**, 7 → 2 model calls, and budget-exhausted-incomplete → a clean correct answer.
+- **Truncated document evidence** — retrieved chunks were being cut at 500 characters, so the agent found the right passage but the answer sat past the cut and it searched in circles until the step budget died. Fixing that plus evidence de-duplication took the same question from **247s → 37.5s**, 7 → 2 model calls, and budget-exhausted-incomplete → a clean correct answer.
 - **Model latency collapse** — `llama-3.3-70b`'s tool-calling latency degraded from ~21s to ~184s under free-tier congestion. Re-probing the catalog and switching to `deepseek-v4-flash` was a one-line config change; a full run went from ~8 minutes to 93s.
 
 These are recorded with evidence in [`docs/design-decisions.md`](docs/design-decisions.md).
@@ -45,12 +45,15 @@ question → planner (LLM decides which tools to call)
          → evidence store (deduped, source-attributed)
          → synthesis with inline [n] citations
          → JSONL trace (every call, token, latency, cost)
+
+upload → extract (pypdf / text) → chunk → embed → upsert to Pinecone
 ```
 
 - **Agent core** — a hand-rolled tool-use loop on OpenAI-compatible chat completions. No agent framework, so every part of the loop (tool-call validation, retry, budget enforcement, graceful degradation) is explicit and explainable.
-- **Retrieval** — hybrid. Web search falls over between providers on quota or outage; corpus retrieval embeds with `gemini-embedding-001` (Matryoshka-truncated to 768 dims, content-hash cached so re-ingest is idempotent), queries Pinecone, then reranks with a hosted cross-encoder that degrades Pinecone → Cohere → no-rerank rather than failing the query.
+- **Retrieval** — hybrid. Web search falls over between providers on quota or outage; document retrieval embeds with `gemini-embedding-001` (Matryoshka-truncated to 768 dims, content-hash cached so re-ingest is idempotent), queries Pinecone, then reranks with a hosted cross-encoder that degrades Pinecone → Cohere → no-rerank rather than failing the query.
+- **Document upload** — PDFs and text files are extracted, chunked, embedded and indexed through the same pipeline as CLI ingest. Chunk ids are name-derived, so re-uploading a document *replaces* it; without deleting first, a shorter revision would strand orphan chunks from the previous version and silently poison retrieval. Scanned PDFs are rejected with an explanation rather than indexed as empty text.
 - **Guardrails** — a hard step budget bounds the loop; a client-side rate limiter stays under the provider's cap; retries use exponential backoff; malformed tool calls are fed back to the model as errors rather than crashing the run.
-- **Observability** — every run writes `traces/<run_id>.jsonl`. Run history in the UI is reconstructed from those files; there is no database.
+- **Observability** — every run writes `traces/<run_id>.jsonl`, including its final answer and evidence. Run history in the UI is reconstructed entirely from those files; there is no database.
 
 ## Interface
 
@@ -59,7 +62,7 @@ A Next.js console with four sections, built on the rule that **nothing on screen
 - **Research** — depth and source controls that change real agent behaviour (step budget, tool allowlist), a live activity feed of actual SSE events (model calls, searches, provider retries with their backoff), and a report with citation links.
 - **Library** — every past run, reconstructed from its trace: the answer, a forensic timeline stamped with offsets, sources, and metrics.
 - **Evaluation** — the committed eval reports, with the caveat above stated in the UI.
-- **Corpus** — live index stats and the retrieval pipeline.
+- **Your documents** — drag-and-drop upload, per-document chunk counts, and delete.
 
 Relevance is shown only where a provider actually returns one (Tavily's score, Pinecone's cosine similarity). Serper returns SERP rank, so its relevance column shows `—` rather than passing rank off as a score. Retrieved-but-uncited sources are labelled, not hidden.
 
@@ -97,7 +100,7 @@ Frontend:
 npm install --prefix web && npm run dev --prefix web
 ```
 
-Ingest documents into the corpus:
+Documents can be uploaded from the **Your documents** page, or bulk-ingested from the CLI:
 
 ```bash
 cd backend && python -m app.retrieval.ingest ../docs
@@ -109,7 +112,7 @@ Run the evaluation harness:
 cd backend && python -m app.eval.run_eval --limit 8 --label my-experiment
 ```
 
-Tests (44, no network — LLM and search calls are mocked):
+Tests (51, no network — LLM, search and embedding calls are mocked):
 
 ```bash
 cd backend && python -m pytest tests/ -q

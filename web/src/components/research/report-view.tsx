@@ -12,7 +12,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { hostOf, type DonePayload } from "@/lib/api";
+import { hostOf, isCorpus, type DonePayload, type Evidence } from "@/lib/api";
+
+/** Secondary label for a reference: the domain for web, the chunk for a document. */
+function locatorOf(e: Evidence): string {
+  if (!isCorpus(e)) return hostOf(e.url);
+  const chunk = e.url.split("#")[1];
+  return chunk ? chunk.replace(/^chunk/, "chunk ") : "";
+}
 
 function linkCitations(answer: string) {
   return answer.replace(/\[(\d+)\]/g, (_, n) => `[[${n}]](#src-${n})`);
@@ -132,27 +139,33 @@ export function ReportView({
           <>
             <hr className="my-6" />
             <h2 className="mb-3 text-lg font-semibold tracking-tight">References</h2>
-            <ol className="space-y-1.5 text-sm">
+            {/* Plain list, not <ol>: the [n] markers are the citation keys used
+                in the answer, so browser list numbering would double them up. */}
+            <ul className="list-none space-y-1 pl-0 text-sm">
               {result.evidence.map((e, i) => (
-                <li key={e.url} className="flex gap-2">
-                  <span className="shrink-0 font-mono text-xs text-muted-foreground">
-                    [{i + 1}]
-                  </span>
+                <li key={e.url}>
                   <button
                     type="button"
                     onClick={() => onCite(i + 1)}
-                    className="min-w-0 text-left hover:text-primary"
+                    className="group flex w-full gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-muted"
                   >
-                    <span className="underline-offset-2 hover:underline">
-                      {e.title || hostOf(e.url)}
-                    </span>{" "}
-                    <span className="font-mono text-xs text-muted-foreground">
-                      — {hostOf(e.url)}
+                    <span className="shrink-0 font-mono text-xs text-muted-foreground">
+                      [{i + 1}]
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="underline-offset-2 group-hover:underline">
+                        {e.title || hostOf(e.url)}
+                      </span>
+                      {locatorOf(e) && (
+                        <span className="ml-1.5 font-mono text-xs text-muted-foreground">
+                          · {locatorOf(e)}
+                        </span>
+                      )}
                     </span>
                   </button>
                 </li>
               ))}
-            </ol>
+            </ul>
           </>
         )}
       </article>

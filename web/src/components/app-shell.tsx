@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -30,15 +30,27 @@ const NAV = [
 ];
 
 function ThemeToggle({ collapsed }: { collapsed: boolean }) {
-  const [dark, setDark] = useState(false);
-
-  useEffect(() => setDark(document.documentElement.classList.contains("dark")), []);
+  // The class is set by the pre-paint script in the root layout, so read it
+  // during hydration rather than syncing it back through an effect.
+  const dark = useSyncExternalStore(
+    (onChange) => {
+      const observer = new MutationObserver(onChange);
+      observer.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ["class"],
+      });
+      return () => observer.disconnect();
+    },
+    () => document.documentElement.classList.contains("dark"),
+    () => false, // server render: light is the default surface
+  );
 
   const toggle = () => {
     const next = !dark;
-    setDark(next);
     document.documentElement.classList.toggle("dark", next);
-    localStorage.setItem("theme", next ? "dark" : "light");
+    // Cookie, not localStorage — the root layout reads it server-side to set the
+    // class in the initial HTML, so there is no flash on the next navigation.
+    document.cookie = `theme=${next ? "dark" : "light"};path=/;max-age=31536000;samesite=lax`;
   };
 
   return (
