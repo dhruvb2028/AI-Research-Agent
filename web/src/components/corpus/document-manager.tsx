@@ -3,6 +3,16 @@
 import { FileText, Loader2, Trash2, Upload } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -19,6 +29,11 @@ export function DocumentManager({
 }) {
   const [dragging, setDragging] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  // Deletion is irreversible — the chunks are gone and the original file has to
+  // be re-uploaded — so it goes through a confirmation.
+  const [pendingDelete, setPendingDelete] = useState<{ doc: string; chunks: number } | null>(
+    null,
+  );
   const inputRef = useRef<HTMLInputElement>(null);
 
   const upload = async (files: FileList | null) => {
@@ -137,7 +152,7 @@ export function DocumentManager({
                 size="sm"
                 aria-label={`Remove ${d.doc}`}
                 disabled={busy === d.doc}
-                onClick={() => remove(d.doc)}
+                onClick={() => setPendingDelete(d)}
                 className="text-muted-foreground hover:text-destructive"
               >
                 {busy === d.doc ? (
@@ -150,6 +165,37 @@ export function DocumentManager({
           ))}
         </div>
       )}
+
+      <AlertDialog
+        open={pendingDelete !== null}
+        onOpenChange={(v) => !v && setPendingDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove this document?</AlertDialogTitle>
+            <AlertDialogDescription>
+              <span className="font-mono">{pendingDelete?.doc}</span> and its{" "}
+              {pendingDelete?.chunks} indexed chunk
+              {pendingDelete?.chunks === 1 ? "" : "s"} will be deleted from the search
+              index. The agent will no longer be able to cite it. This cannot be undone —
+              you would need to upload the file again.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep it</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => {
+                const doc = pendingDelete?.doc;
+                setPendingDelete(null);
+                if (doc) remove(doc);
+              }}
+            >
+              Remove document
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
