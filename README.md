@@ -117,3 +117,28 @@ Tests (54, no network — LLM, search and embedding calls are mocked):
 ```bash
 cd backend && python -m pytest tests/ -q
 ```
+
+## Deploying
+
+The frontend goes to Vercel; the API does not. Two properties of the API
+conflict with serverless functions: research runs stream for longer than the
+Hobby duration cap allows, and run history is read back from trace files,
+which a read-only per-invocation filesystem cannot serve. So the API runs on
+Render's native Python runtime instead — [`render.yaml`](render.yaml) is a
+blueprint, no Docker involved.
+
+**API (Render)** — New → Blueprint, point at this repo. Then set the secrets
+listed in `render.yaml` (`sync: false` means "set it in the dashboard"), plus
+`ALLOWED_ORIGINS` set to the Vercel URL once the frontend exists.
+
+**Frontend (Vercel)** — import the repo, set the root directory to `web`, and
+set `NEXT_PUBLIC_API_BASE` to the Render URL. Everything else is detected.
+
+Two free-tier behaviours are worth knowing rather than being surprised by:
+
+- **The API sleeps when idle** and takes about a minute to wake. The UI polls
+  through this and says so, rather than reporting the backend as down.
+- **Storage is ephemeral.** Traces and the embedding cache live on the
+  instance's disk, so run history is "runs this instance has served", not a
+  permanent archive. A persistent disk is a paid feature; moving traces to
+  object storage or Postgres is the fix if that matters.

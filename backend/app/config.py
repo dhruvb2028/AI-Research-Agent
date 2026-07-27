@@ -7,6 +7,12 @@ from dotenv import load_dotenv
 REPO_ROOT = Path(__file__).resolve().parents[2]
 load_dotenv(REPO_ROOT / ".env")
 
+# Where runtime data (traces, embedding cache) is written. Defaults to the repo
+# root for local development. In a container the package sits at /app/app, so
+# REPO_ROOT resolves to "/" — DATA_DIR must be set explicitly there, or traces
+# would be written to the filesystem root.
+DATA_DIR = Path(os.getenv("DATA_DIR", str(REPO_ROOT)))
+
 NIM_BASE_URL = "https://integrate.api.nvidia.com/v1"
 NIM_API_KEY = os.getenv("Nvidia_API_KEY", "")
 

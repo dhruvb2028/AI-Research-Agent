@@ -152,6 +152,28 @@ async function getJSON<T>(path: string): Promise<T> {
 }
 
 export const getConfig = () => getJSON<AgentConfig>("/config");
+
+/**
+ * Free-tier hosts suspend an idle instance and take ~50s to wake it, during
+ * which requests fail outright. Retry rather than reporting the backend as
+ * down, and let the caller show that waking is in progress.
+ */
+export async function getConfigWithWake(
+  onWaking: () => void,
+  attempts = 12,
+  delayMs = 5000,
+): Promise<AgentConfig> {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await getConfig();
+    } catch (e) {
+      if (i === attempts - 1) throw e;
+      if (i === 0) onWaking();
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+  }
+  throw new Error("unreachable");
+}
 export const getRuns = () => getJSON<RunSummary[]>("/runs");
 export const getRun = (id: string) => getJSON<RunDetail>(`/runs/${id}`);
 export const getEvals = () => getJSON<EvalReport[]>("/evals");

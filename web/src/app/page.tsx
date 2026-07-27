@@ -16,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   citedIndices,
-  getConfig,
+  getConfigWithWake,
   streamResearch,
   type AgentConfig,
   type Depth,
@@ -49,14 +49,24 @@ export default function ResearchPage() {
   const [tab, setTab] = useState("timeline");
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const [waiting, setWaiting] = useState("Planning the research");
+  // The API sleeps on a free-tier host; waking it takes about a minute.
+  const [waking, setWaking] = useState(false);
 
   const abortRef = useRef<AbortController | null>(null);
   const startedAt = useRef(0);
 
   useEffect(() => {
-    getConfig()
-      .then(setConfig)
-      .catch(() => toast.error("Backend unreachable — start the API on port 8000"));
+    getConfigWithWake(() => setWaking(true))
+      .then((c) => {
+        setConfig(c);
+        setWaking(false);
+      })
+      .catch(() => {
+        setWaking(false);
+        toast.error("Could not reach the research API", {
+          description: "It may be restarting. Reload in a moment.",
+        });
+      });
   }, []);
 
   useEffect(() => {
@@ -188,6 +198,8 @@ export default function ResearchPage() {
                 Running <span className="font-mono">{config.model.split("/").pop()}</span>{" "}
                 over web search and your documents
               </>
+            ) : waking ? (
+              "Waking the research API — free-tier instances sleep when idle, this takes about a minute…"
             ) : (
               "Connecting to the agent…"
             )}

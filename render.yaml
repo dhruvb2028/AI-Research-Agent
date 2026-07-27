@@ -1,0 +1,41 @@
+# Render blueprint for the API. Native Python runtime — no Docker.
+#
+# The API is not deployed to Vercel because two of its properties conflict with
+# serverless functions: research runs stream for longer than the Hobby duration
+# cap allows, and run history is read back from trace files, which a read-only
+# per-invocation filesystem cannot provide.
+services:
+  - type: web
+    name: research-agent-api
+    runtime: python
+    plan: free
+    region: oregon
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12"
+      # Traces and the embedding cache are written here. On the free plan this
+      # is ephemeral: it survives while the instance is up and is cleared when
+      # the instance restarts, so run history is "runs this instance served",
+      # not a permanent archive. A persistent disk is a paid feature.
+      - key: DATA_DIR
+        value: /opt/render/project/src/backend/data
+      # Set to the deployed frontend origin, e.g. https://<app>.vercel.app
+      - key: ALLOWED_ORIGINS
+        sync: false
+      # Secrets — set in the Render dashboard, never committed.
+      - key: Nvidia_API_KEY
+        sync: false
+      - key: TAVILY_API_KEY
+        sync: false
+      - key: SERPER_API_KEY
+        sync: false
+      - key: GOOGLE_API_KEY
+        sync: false
+      - key: PINECONE_API_KEY
+        sync: false
+      - key: COHERE_API_KEY
+        sync: false

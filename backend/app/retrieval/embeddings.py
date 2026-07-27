@@ -15,14 +15,14 @@ import time
 
 import httpx
 
-from app.config import EMBED_DIM, GOOGLE_API_KEY, REPO_ROOT
+from app.config import DATA_DIR, EMBED_DIM, GOOGLE_API_KEY
 from app.ratelimit import RateLimiter
 
 EMBED_MODEL = "gemini-embedding-001"
 EMBED_ENDPOINT = (
     f"https://generativelanguage.googleapis.com/v1beta/models/{EMBED_MODEL}:batchEmbedContents"
 )
-CACHE_DIR = REPO_ROOT / ".embedding_cache"
+CACHE_DIR = DATA_DIR / ".embedding_cache"
 BATCH_SIZE = 20
 MAX_ATTEMPTS = 4
 BACKOFF_BASE_S = 2.0

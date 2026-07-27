@@ -10,9 +10,9 @@ import time
 import uuid
 from pathlib import Path
 
-from app.config import REPO_ROOT
+from app.config import DATA_DIR
 
-TRACE_DIR = REPO_ROOT / "traces"
+TRACE_DIR = DATA_DIR / "traces"
 
 # Would-be cost per 1M tokens (input, output) in USD if these open models were
 # bought from a typical paid host — actual spend on NIM's free tier is $0.
