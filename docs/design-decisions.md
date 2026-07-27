@@ -132,7 +132,35 @@ index instead of re-numbering.
 (6.6x), 7 → 2 LLM calls, budget-exhausted-incomplete → clean correct answer,
 17k → 2.4k input tokens. Both fixes have regression tests.
 
-## 007 — Smoke-test artifacts stay untracked (2026-07-26)
+## 007 — Provider degraded a model in production; recovery was one env var (2026-07-27)
+
+**What happened**: the first live research run on the deployed API failed with
+`BadRequestError 400: Function ... DEGRADED function cannot be invoked` from
+NVIDIA NIM. The deployment was healthy — health check, config, corpus and CORS
+all returned correctly. The model itself had been degraded provider-side.
+
+**Diagnosis**: probing the catalog with a short timeout showed
+`deepseek-v4-flash` degraded, `llama-3.3-70b` timing out under congestion, and
+`llama-3.1-8b` serving valid tool calls. So this was provider capacity, not a
+code fault.
+
+**Recovery**: set `LARGE_MODEL=meta/llama-3.1-8b-instruct` in the environment
+and redeploy. No code change, no rebuild of the image, no rollback — which is
+the payoff for keeping the model behind config and the client behind an
+OpenAI-compatible interface. Total time from error to a working production run
+was a few minutes.
+
+**Known cost**: 8b is a weaker synthesiser than the 70b or deepseek, so answer
+quality on the deployed demo is below what the committed eval reports measured
+(those ran against deepseek at `4ec4dcf`). Switch back when NIM recovers, and
+note that if the agent runs on 8b the eval judge must move to a different
+family to preserve the no-self-grading property.
+
+**Lesson recorded**: decision 004 predicted free-tier models get rotated or
+degraded, and treated a one-line config swap as the mitigation. This is that
+prediction being tested in production rather than in planning.
+
+## 008 — Smoke-test artifacts stay untracked (2026-07-26)
 
 `scripts/nim_smoke_results.json` is gitignored: error payloads embed the NIM
 account identifier, and results are point-in-time measurements, not source.

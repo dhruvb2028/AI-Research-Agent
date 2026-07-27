@@ -1,6 +1,12 @@
 # AI Research Agent
 
+**[Live demo](https://ai-research-agent-alpha-six.vercel.app)** · [API](https://ai-research-agent-e1je.onrender.com/config)
+
 An agentic research assistant that plans its own searches, gathers evidence from the live web and from documents you upload, and answers with citations you can trace back to the exact passage the model read.
+
+> The API sleeps when idle on its free tier and takes about a minute to wake on
+> the first request. The UI polls through that and says so rather than showing
+> an error.
 
 The point of the project is not the demo — it is the **measurement**. Every architecture change is scored against a labelled evaluation set, every run writes a trace, and the UI is built so that a reviewer can inspect *why* an answer says what it says.
 
