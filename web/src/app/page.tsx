@@ -24,10 +24,13 @@ import {
   type ToolName,
 } from "@/lib/api";
 
+// Each example targets a different capability: synthesis across many sources,
+// a comparison the answer has to structure itself, and a question where the
+// sources genuinely disagree — which is where the contradiction handling shows.
 const EXAMPLES = [
-  "Why was Brave dropped from this project's search fallback chain?",
-  "What did NVIDIA announce at GTC 2026, and how did the market react?",
-  "Which is taller: the Eiffel Tower or the UN headquarters building?",
+  "What are the main technical barriers to enterprise adoption of AI coding agents?",
+  "Compare the licence terms of the latest Llama, Mistral and DeepSeek model releases.",
+  "How much electricity do AI data centres actually consume, and why do estimates disagree?",
 ];
 
 type Phase = "idle" | "running" | "done" | "error";
