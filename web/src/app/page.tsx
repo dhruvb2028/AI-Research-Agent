@@ -183,7 +183,7 @@ export default function ResearchPage() {
             {config ? (
               <>
                 Running <span className="font-mono">{config.model.split("/").pop()}</span>{" "}
-                over web search and a private corpus
+                over web search and project docs
               </>
             ) : (
               "Connecting to the agent…"
@@ -225,10 +225,11 @@ export default function ResearchPage() {
             <Sparkles className="size-5 text-primary" />
           </div>
           <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-muted-foreground">
-            The agent plans its own searches, gathers evidence from the live web and a
-            private document corpus, and writes a cited answer. Every step, source
-            passage and cost shown below comes from the run itself — nothing is
-            simulated.
+            The agent plans its own searches, gathers evidence, and writes an answer
+            with citations you can open and check. It searches the live web and this
+            project&apos;s own engineering docs — so it can answer questions about its
+            own design from sources that aren&apos;t on the public web. Every step,
+            passage and cost shown is recorded from the run itself.
           </p>
           <div className="mt-5 flex flex-wrap justify-center gap-2">
             {EXAMPLES.map((ex) => (

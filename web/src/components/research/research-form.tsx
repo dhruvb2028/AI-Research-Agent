@@ -22,8 +22,21 @@ const DEPTH_LABEL: Record<Depth, string> = {
 };
 
 const SOURCES: { id: ToolName; label: string; hint: string; icon: typeof Globe }[] = [
-  { id: "search_web", label: "Web", hint: "Tavily, falling back to Serper", icon: Globe },
-  { id: "search_corpus", label: "Private corpus", hint: "Pinecone + reranking", icon: Database },
+  {
+    id: "search_web",
+    label: "Web",
+    hint: "Live web search via Tavily, falling back to Serper if a quota runs out.",
+    icon: Globe,
+  },
+  {
+    id: "search_corpus",
+    label: "Project docs",
+    hint:
+      "This project's own engineering decision log, indexed for semantic search. " +
+      "Ask why a provider was dropped or a model swapped and the answer is cited " +
+      "from documents that are not on the public web.",
+    icon: Database,
+  },
 ];
 
 export function ResearchForm({

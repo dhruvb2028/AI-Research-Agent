@@ -80,7 +80,7 @@ function ToolEntry({ item }: { item: Extract<TimelineItem, { kind: "tool" }> }) 
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium">
-                {corpus ? "Searched private corpus" : "Searched the web"}
+                {corpus ? "Searched project docs" : "Searched the web"}
               </span>
               <Badge variant="secondary" className="h-5 font-mono text-[10px] font-normal">
                 {provider}

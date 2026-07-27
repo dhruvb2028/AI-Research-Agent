@@ -106,6 +106,7 @@ export function SourcePreview({
               <Button
                 variant="outline"
                 className="w-full gap-2"
+                nativeButton={false}
                 render={<a href={evidence.url} target="_blank" rel="noreferrer" />}
               >
                 Open original source <ExternalLink className="size-3.5" />

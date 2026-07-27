@@ -75,7 +75,7 @@ export function SourcesTable({
           <SelectContent>
             <SelectItem value="all">All types</SelectItem>
             <SelectItem value="web">Web</SelectItem>
-            <SelectItem value="corpus">Private corpus</SelectItem>
+            <SelectItem value="corpus">Project docs</SelectItem>
           </SelectContent>
         </Select>
         <Select value={usage} onValueChange={(v) => setUsage(v ?? "all")}>
@@ -165,7 +165,7 @@ export function SourcesTable({
 
       <p className="text-xs text-muted-foreground">
         Relevance is the provider&apos;s own score — Tavily&apos;s ranking score or the
-        corpus cosine similarity. Serper returns SERP rank rather than a score, shown
+        document-index cosine similarity. Serper returns SERP rank rather than a score, shown
         as &ldquo;—&rdquo; rather than converted into one.
       </p>
     </div>

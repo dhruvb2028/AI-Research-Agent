@@ -45,7 +45,31 @@ class PineconeStore:
             "vectors": stats.get("total_vector_count", 0),
             "dimension": stats.get("dimension", self._dim),
             "namespaces": namespaces,
+            "documents": self.list_documents(),
         }
+
+    def list_documents(self, limit: int = 500) -> list[dict]:
+        """Which documents are indexed, derived from the chunk ids we assign.
+
+        Ids are "<doc>::chunk<n>", so the document list is recoverable without
+        storing a separate manifest.
+        """
+        counts: dict[str, int] = {}
+        seen = 0
+        for batch in self._index.list():
+            for item in batch:
+                vec_id = item.id if hasattr(item, "id") else str(item)
+                doc = vec_id.split("::")[0]
+                counts[doc] = counts.get(doc, 0) + 1
+                seen += 1
+                if seen >= limit:
+                    break
+            if seen >= limit:
+                break
+        return [
+            {"doc": doc, "chunks": n}
+            for doc, n in sorted(counts.items(), key=lambda kv: -kv[1])
+        ]
 
     def upsert_chunks(self, chunks: list[dict], vectors: list[list[float]]) -> int:
         payload = [

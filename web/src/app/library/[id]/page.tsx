@@ -57,7 +57,7 @@ function EventRow({ e }: { e: TimelineEvent }) {
           <>
             <div className="flex items-center gap-2">
               <span className="text-sm">
-                {e.tool === "search_corpus" ? "Searched private corpus" : "Searched the web"}
+                {e.tool === "search_corpus" ? "Searched project docs" : "Searched the web"}
               </span>
               {e.provider && (
                 <Badge variant="secondary" className="h-5 font-mono text-[10px] font-normal">
@@ -121,6 +121,8 @@ export default function RunDetailPage() {
         variant="ghost"
         size="sm"
         className="mb-3 -ml-2 gap-1.5 text-muted-foreground"
+        // Rendering an anchor, so opt out of native <button> semantics.
+        nativeButton={false}
         render={<Link href="/library" />}
       >
         <ArrowLeft className="size-3.5" /> Library

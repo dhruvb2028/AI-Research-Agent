@@ -133,6 +133,8 @@ export interface CorpusStats {
   vectors?: number;
   dimension?: number;
   namespaces?: Record<string, { vectors: number }>;
+  /** Indexed documents, derived from chunk ids. */
+  documents?: { doc: string; chunks: number }[];
   error?: string;
 }
 
@@ -202,7 +204,7 @@ export function citedIndices(answer: string): Set<number> {
 }
 
 export function providerLabel(source: string): string {
-  if (source.startsWith("corpus/")) return "private corpus";
+  if (source.startsWith("corpus/")) return "project docs";
   return source;
 }
 
