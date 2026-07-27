@@ -132,7 +132,15 @@ listed in `render.yaml` (`sync: false` means "set it in the dashboard"), plus
 `ALLOWED_ORIGINS` set to the Vercel URL once the frontend exists.
 
 **Frontend (Vercel)** — import the repo, set the root directory to `web`, and
-set `NEXT_PUBLIC_API_BASE` to the Render URL. Everything else is detected.
+set `NEXT_PUBLIC_API_BASE` to the Render URL. [`web/vercel.json`](web/vercel.json)
+covers the rest.
+
+Both are pinned to regions near the expected audience — Vercel `bom1`, Render
+`singapore`. Pages are server-rendered per request (the root layout reads a
+theme cookie), so the Vercel region sets HTML latency, while every data call
+goes from the browser straight to Render, so that region sets API latency.
+Neither service calls the other server-side, which is why they can sit in
+different regions without a penalty.
 
 Two free-tier behaviours are worth knowing rather than being surprised by:
 

@@ -131,7 +131,8 @@ def embed_texts(
     _api=_embed_batch_api,
 ) -> list[list[float]]:
     """Embed texts, serving unchanged content from the local cache."""
-    CACHE_DIR.mkdir(exist_ok=True)
+    # parents=True: on a fresh host DATA_DIR itself may not exist yet.
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
     out: list[list[float] | None] = [None] * len(texts)
     misses: list[int] = []
 

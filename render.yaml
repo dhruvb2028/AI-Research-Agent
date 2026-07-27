@@ -9,7 +9,9 @@ services:
     name: research-agent-api
     runtime: python
     plan: free
-    region: oregon
+    # Closest region to the expected audience. The browser talks to this API
+    # directly, so this is the latency that is actually felt.
+    region: singapore
     rootDir: backend
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
