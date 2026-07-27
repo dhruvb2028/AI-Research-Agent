@@ -67,3 +67,18 @@ def test_ingest_chunks_embeds_and_replaces():
 def test_ingest_rejects_empty_document():
     with pytest.raises(DocumentError, match="no readable text"):
         ingest_document("empty.md", b"   ", store=FakeStore(), embed=_embed)
+
+
+def test_embedding_failure_leaves_previous_version_intact():
+    """A quota failure must not delete the copy the user already had indexed."""
+    from app.retrieval.embeddings import EmbeddingError
+
+    store = FakeStore()
+
+    def _boom(texts):
+        raise EmbeddingError("daily quota used up")
+
+    with pytest.raises(DocumentError, match="daily quota"):
+        ingest_document("doc.md", b"content " * 200, store=store, embed=_boom)
+    assert store.deleted == []  # nothing removed
+    assert store.upserted == []

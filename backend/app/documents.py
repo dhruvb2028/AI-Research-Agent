@@ -10,7 +10,7 @@ from __future__ import annotations
 import io
 
 from app.retrieval.chunking import chunk_document
-from app.retrieval.embeddings import embed_texts
+from app.retrieval.embeddings import EmbeddingError, embed_texts
 from app.retrieval.pinecone_store import PineconeStore
 
 TEXT_SUFFIXES = {".md", ".txt", ".markdown", ".rst", ".csv", ".json", ".py", ".ts", ".tsx"}
@@ -70,9 +70,16 @@ def ingest_document(
         raise DocumentError("document contained no readable text")
 
     store = store or PineconeStore()
+    # Embed before deleting: if embedding fails part-way (quota, network), the
+    # previously indexed version is still intact and searchable. Deleting first
+    # would leave the user with nothing on a failure they did not cause.
+    try:
+        vectors = embed([c["text"] for c in chunks])
+    except EmbeddingError as e:
+        raise DocumentError(str(e)) from e
+
     # Re-uploading replaces the old version rather than leaving orphan chunks
     # behind: chunk ids are positional, so a shorter revision would strand them.
     store.delete_document(filename)
-    vectors = embed([c["text"] for c in chunks])
     store.upsert_chunks(chunks, vectors)
     return {"doc": filename, "chunks": len(chunks), "characters": len(text)}

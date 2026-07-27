@@ -91,3 +91,47 @@ def test_raises_after_max_attempts():
     with pytest.raises(RateLimitError):
         client.chat(model="m", messages=[{"role": "user", "content": "hi"}])
     assert flaky.calls == MAX_ATTEMPTS
+
+
+def _resp(status, body=None, json_ct=True):
+    return httpx.Response(
+        status,
+        json=body if body is not None else {},
+        headers={"content-type": "application/json"} if json_ct else {},
+        request=httpx.Request("POST", "https://x"),
+    )
+
+
+def test_embeddings_retry_uses_googles_requested_delay(monkeypatch):
+    import app.retrieval.embeddings as emb
+
+    monkeypatch.setattr(emb, "GOOGLE_API_KEY", "test")
+    slept = []
+    calls = {"n": 0}
+
+    def fake_post(texts, dim, task_type):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return _resp(429, {"error": {"message": "rate limit", "details": [{"retryDelay": "7s"}]}})
+        return _resp(200, {"embeddings": [{"values": [3.0, 4.0]} for _ in texts]})
+
+    monkeypatch.setattr(emb, "_post_batch", fake_post)
+    monkeypatch.setattr(emb._LIMITER, "acquire", lambda: 0.0)
+    out = emb._embed_batch_api(["a"], 2, "RETRIEVAL_DOCUMENT", sleeper=slept.append)
+    assert slept == [7.0]  # honoured Google's own retryDelay
+    assert out[0] == [0.6, 0.8]  # and normalised the vector
+
+
+def test_embeddings_daily_quota_fails_fast(monkeypatch):
+    import app.retrieval.embeddings as emb
+
+    monkeypatch.setattr(emb, "GOOGLE_API_KEY", "test")
+    monkeypatch.setattr(
+        emb, "_post_batch",
+        lambda *a: _resp(429, {"error": {"message": "Quota exceeded: requests per day"}}),
+    )
+    monkeypatch.setattr(emb._LIMITER, "acquire", lambda: 0.0)
+    slept = []
+    with pytest.raises(emb.QuotaExhausted, match="daily"):
+        emb._embed_batch_api(["a"], 2, "RETRIEVAL_DOCUMENT", sleeper=slept.append)
+    assert slept == []  # no pointless backoff on a daily limit
